@@ -18,10 +18,10 @@ def conexiondb():
 
 def borrar_modelo():
     sql = '''
-    DROP TABLE temporal1;
-    DROP TABLE Earthquakes;
-    DROP TABLE TsunamiEvents;
-    DROP TABLE Locations;
+    DROP TABLE Temporal;
+    DROP TABLE Tsunami;
+    DROP TABLE Fecha;
+    DROP TABLE Pais;
     '''
     
     connection = conexiondb()
@@ -36,7 +36,7 @@ def borrar_modelo():
 # Función para crear modelo
 def crear_modelo():
     sql = '''
-    CREATE TABLE Temporal1 (
+    CREATE TABLE Temporal (
         Year NVARCHAR(50),
         Mo NVARCHAR(50),
         Dy NVARCHAR(50),
@@ -65,49 +65,45 @@ def crear_modelo():
         Location_Name NVARCHAR(50)
     );
 
-    -- tabla de Ubicaciones
-    CREATE TABLE Locations (
-        LocationID INT PRIMARY KEY IDENTITY,
-        Latitude FLOAT,
-        Longitude FLOAT,
-        LocationName VARCHAR(255)
+    CREATE TABLE Pais (
+        PaisID INT PRIMARY KEY IDENTITY,
+        Pais VARCHAR(255)
     );
 
-    -- tabla de Eventos de Tsunami
-    CREATE TABLE TsunamiEvents (
-        TsunamiEventID INT PRIMARY KEY IDENTITY,
+    CREATE TABLE Fecha (
+        FechaID INT PRIMARY KEY IDENTITY,
         Year INT,
         Mo INT,
         Dy INT,
         Hr INT,
         Mn INT,
-        Sec FLOAT,
+        Sec FLOAT
+    );
+
+    CREATE TABLE Tsunami (
+        TsunamiID INT PRIMARY KEY IDENTITY,
+        LocationName VARCHAR(255),
+        TsunamiMagnitude FLOAT,
+        TsunamiIntensity FLOAT,
         TsunamiEventValidity INT,
         TsunamiCauseCode INT,
         MaximumWaterHeight FLOAT,
         NumberOfRunups INT,
-        TsunamiMagnitude FLOAT,
-        TsunamiIntensity FLOAT,
+        EarthquakeMagnitude FLOAT,
+        Latitude FLOAT,
+        Longitude FLOAT,
         TotalDeaths INT,
+        TotalInjuries INT,
         TotalMissing INT,
         TotalMissingDescription INT,
-        TotalInjuries INT,
         TotalDamage FLOAT,
         TotalDamageDescription INT,
         TotalHousesDestroyed INT,
         TotalHousesDamaged INT,
-        Country VARCHAR(255),
-        LocationID INT,
-        FOREIGN KEY (LocationID) REFERENCES Locations(LocationID)
-    );
-
-    -- tabla de Terremotos
-    CREATE TABLE Earthquakes (
-        EarthquakeID INT PRIMARY KEY IDENTITY,
-        TsunamiEventID INT,
-        EarthquakeMagnitude FLOAT,
-        Deposits INT,
-        FOREIGN KEY (TsunamiEventID) REFERENCES TsunamiEvents(TsunamiEventID)
+        PaisID INT,
+        FOREIGN KEY (PaisID) REFERENCES Pais(PaisID),
+        FechaID INT,
+        FOREIGN KEY (FechaID) REFERENCES Fecha(FechaID)
     );
     '''
     connection = conexiondb()
@@ -124,7 +120,7 @@ def extraer_informacion():
     nombre_archivo = input("Ingrese el nombre del archivo: ")
  
     sql = '''
-    BULK INSERT Temporal1
+    BULK INSERT Temporal
     FROM '/practica1/{}'
     WITH
     (
@@ -147,70 +143,40 @@ def extraer_informacion():
 
 def cargar_informacion():
     sql = '''
-    -- Paso 1: Insertar datos en la tabla Locations
-    INSERT INTO Locations (Latitude, Longitude, LocationName)
+    INSERT INTO Pais (Pais)
+    SELECT DISTINCT Country
+    FROM Temporal;
+
+    INSERT INTO Fecha (Year,Mo,Dy,Hr,Mn,Sec)
+    SELECT DISTINCT CONVERT(INT,Year),CONVERT(INT,Mo),CONVERT(INT,Dy),CONVERT(INT,Hr),CONVERT(INT,Mn),CONVERT(FLOAT,Sec)
+    FROM Temporal;
+
+    INSERT INTO Tsunami (LocationName,TsunamiMagnitude,TsunamiIntensity,TsunamiEventValidity,TsunamiCauseCode,
+        MaximumWaterHeight,NumberOfRunups,EarthquakeMagnitude,Latitude,Longitude,TotalDeaths,TotalInjuries,TotalMissing,
+        TotalMissingDescription,TotalDamage,TotalDamageDescription,TotalHousesDestroyed,TotalHousesDamaged,PaisID,FechaID)
     SELECT DISTINCT 
+        Location_Name,
+        CONVERT(FLOAT, Tsunami_Magnitude),
+        CONVERT(FLOAT, Tsunami_Intensity),
+        CONVERT(INT, Tsunami_Event_Validity),
+        CONVERT(INT, Tsunami_Cause_Code),
+        CONVERT(FLOAT, Maximum_Water_Height),
+        CONVERT(INT, Number_of_Runups),
+        CONVERT(FLOAT, Earthquake_Magnitude),
         CONVERT(FLOAT, Latitude), 
-        CONVERT(FLOAT, Longitude), 
-        Location_Name
-    FROM temporal1
-    WHERE Latitude IS NOT NULL AND Longitude IS NOT NULL AND Location_Name IS NOT NULL;
-
-    -- Paso 2: Insertar datos en la tabla TsunamiEvents
-    INSERT INTO TsunamiEvents (
-        Year, Mo, Dy, Hr, Mn, Sec, TsunamiEventValidity, TsunamiCauseCode,
-        MaximumWaterHeight, NumberOfRunups, TsunamiMagnitude, TsunamiIntensity,
-        TotalDeaths, TotalMissing, TotalMissingDescription, TotalInjuries,
-        TotalDamage, TotalDamageDescription, TotalHousesDestroyed, TotalHousesDamaged,
-        Country, LocationID
-    )
-    SELECT 
-        CONVERT(INT, Year), 
-        CONVERT(INT, Mo), 
-        CONVERT(INT, Dy), 
-        CONVERT(INT, Hr), 
-        CONVERT(INT, Mn), 
-        CONVERT(FLOAT, Sec), 
-        CONVERT(INT, Tsunami_Event_Validity), 
-        CONVERT(INT, Tsunami_Cause_Code), 
-        CONVERT(FLOAT, Maximum_Water_Height), 
-        CONVERT(INT, Number_of_Runups), 
-        CONVERT(FLOAT, Tsunami_Magnitude), 
-        CONVERT(FLOAT, Tsunami_Intensity), 
-        CONVERT(INT, Total_Deaths), 
-        CONVERT(INT, Total_Missing), 
-        CONVERT(INT, Total_Missing_Description), 
-        CONVERT(INT, Total_Injuries), 
-        CONVERT(FLOAT, Total_Damage), 
-        CONVERT(INT, Total_Damage_Description), 
-        CONVERT(INT, Total_Houses_Destroyed), 
-        CONVERT(INT, Total_Houses_Damaged), 
-        Country, 
-        L.LocationID
-    FROM temporal1 T
-    JOIN Locations L ON T.Location_Name = L.LocationName
-    WHERE Year IS NOT NULL AND Mo IS NOT NULL AND Dy IS NOT NULL AND Hr IS NOT NULL 
-        AND Mn IS NOT NULL AND Sec IS NOT NULL AND Tsunami_Event_Validity IS NOT NULL 
-        AND Tsunami_Cause_Code IS NOT NULL AND Maximum_Water_Height IS NOT NULL 
-        AND Number_of_Runups IS NOT NULL AND Tsunami_Magnitude IS NOT NULL 
-        AND Tsunami_Intensity IS NOT NULL AND Total_Deaths IS NOT NULL 
-        AND Total_Missing IS NOT NULL AND Total_Missing_Description IS NOT NULL 
-        AND Total_Injuries IS NOT NULL AND Total_Damage IS NOT NULL 
-        AND Total_Damage_Description IS NOT NULL AND Total_Houses_Destroyed IS NOT NULL 
-        AND Total_Houses_Damaged IS NOT NULL AND Country IS NOT NULL;
-
-    -- Paso 3: Insertar datos en la tabla Earthquakes
-    INSERT INTO Earthquakes (
-        TsunamiEventID, EarthquakeMagnitude, Deposits
-    )
-    SELECT 
-        TE.TsunamiEventID, 
-        CONVERT(FLOAT, Earthquake_Magnitude), 
-        CONVERT(INT, Deposits)
-    FROM temporal1 T
-    JOIN TsunamiEvents TE ON T.Year = TE.Year AND T.Mo = TE.Mo 
-        AND T.Dy = TE.Dy AND T.Hr = TE.Hr AND T.Mn = TE.Mn AND T.Sec = TE.Sec
-    WHERE Earthquake_Magnitude IS NOT NULL AND Deposits IS NOT NULL;
+        CONVERT(FLOAT, Longitude),
+        CONVERT(INT, Total_Deaths),
+        CONVERT(INT, Total_Injuries),
+        CONVERT(INT, Total_Missing),
+        CONVERT(INT, Total_Missing_Description),
+        CONVERT(FLOAT, Total_Damage),
+        CONVERT(INT, Total_Damage_Description),
+        CONVERT(INT, Total_Houses_Destroyed),
+        CONVERT(INT, Total_Houses_Damaged),
+        Pais.PaisID,
+        Fecha.FechaID
+    FROM Temporal,Pais,Fecha
+    where Temporal.Country = Pais.Pais AND Temporal.Year = Fecha.Year;
     '''
 
     connection = conexiondb()
