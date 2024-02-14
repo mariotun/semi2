@@ -210,7 +210,7 @@ def realizar_consultas():
     '''
 
     sql3 = '''
-    SELECT P.Pais, F.Year
+    SELECT DISTINCT P.Pais, F.Year
     FROM Pais P
     JOIN Tsunami T ON P.PaisID = T.PaisID
     JOIN Fecha F ON T.FechaID = F.FechaID
@@ -221,6 +221,7 @@ def realizar_consultas():
     SELECT P.Pais, AVG(T.TotalDamage) AS PromedioDamage
     FROM Pais P
     JOIN Tsunami T ON P.PaisID = T.PaisID
+    WHERE P.Pais IS NOT NULL and T.TotalDamage IS NOT NULL
     GROUP BY P.Pais;
     '''
 
@@ -268,6 +269,7 @@ def realizar_consultas():
     SELECT P.Pais, AVG(T.MaximumWaterHeight) AS PromedioAlturaAgua
     FROM Pais P
     JOIN Tsunami T ON P.PaisID = T.PaisID
+    WHERE P.Pais IS NOT NULL AND T.MaximumWaterHeight IS NOT NULL
     GROUP BY P.Pais;
     '''
 
