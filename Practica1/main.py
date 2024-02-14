@@ -190,18 +190,106 @@ def cargar_informacion():
 
 # Función para realizar consultas
 def realizar_consultas():
-    connection = pyodbc.connect('DRIVER={SQL Server};SERVER=nombre_servidor;DATABASE=nombre_base_de_datos;UID=usuario;PWD=password')
+    connection = conexiondb()
     cursor = connection.cursor()
-    consulta1 = "SELECT * FROM tabla1"
-    cursor.execute(consulta1)
-    resultados = cursor.fetchall()
-    with open('resultados_consulta.txt', 'w') as f:
-        for resultado in resultados:
-            f.write(str(resultado) + '\n')
-    connection.close()
-    print("Se han guardado los resultados de las consultas en 'resultados_consulta.txt'.")
 
-# Función principal
+    sql1 = '''
+    SELECT 'Pais' AS Tabla, COUNT(*) AS Total FROM Pais
+    UNION ALL
+    SELECT 'Fecha' AS Tabla, COUNT(*) AS Total FROM Fecha
+    UNION ALL
+    SELECT 'Tsunami' AS Tabla, COUNT(*) AS Total FROM Tsunami;
+    '''
+
+    sql2 = '''
+    SELECT Year, COUNT(*) AS Cantidad
+    FROM Fecha F
+    JOIN Tsunami T ON F.FechaID = T.FechaID
+    GROUP BY Year
+    ORDER BY Year;
+    '''
+
+    sql3 = '''
+    SELECT P.Pais, F.Year
+    FROM Pais P
+    JOIN Tsunami T ON P.PaisID = T.PaisID
+    JOIN Fecha F ON T.FechaID = F.FechaID
+    ORDER BY P.Pais, F.Year;
+    '''
+
+    sql4 = '''
+    SELECT P.Pais, AVG(T.TotalDamage) AS PromedioDamage
+    FROM Pais P
+    JOIN Tsunami T ON P.PaisID = T.PaisID
+    GROUP BY P.Pais;
+    '''
+
+    sql5 = '''
+    SELECT TOP 5 P.Pais, SUM(T.TotalDeaths) AS TotalMuertes
+    FROM Pais P
+    JOIN Tsunami T ON P.PaisID = T.PaisID
+    GROUP BY P.Pais
+    ORDER BY TotalMuertes DESC;
+    '''
+
+    sql6 = '''
+    SELECT TOP 5 F.Year, SUM(T.TotalDeaths) AS TotalMuertes
+    FROM Fecha F
+    JOIN Tsunami T ON F.FechaID = T.FechaID
+    GROUP BY F.Year
+    ORDER BY TotalMuertes DESC;
+    '''
+
+    sql7 = '''
+    SELECT TOP 5 F.Year, COUNT(*) AS TotalTsunamis
+    FROM Fecha F
+    JOIN Tsunami T ON F.FechaID = T.FechaID
+    GROUP BY F.Year
+    ORDER BY TotalTsunamis DESC;
+    '''
+
+    sql8 = '''
+    SELECT TOP 5 P.Pais, SUM(T.TotalHousesDestroyed) AS CasasDestruidas
+    FROM Pais P
+    JOIN Tsunami T ON P.PaisID = T.PaisID
+    GROUP BY P.Pais
+    ORDER BY CasasDestruidas DESC;
+    '''
+
+    sql9 = '''
+    SELECT TOP 5 P.Pais, SUM(T.TotalHousesDamaged) AS CasasDanadas
+    FROM Pais P
+    JOIN Tsunami T ON P.PaisID = T.PaisID
+    GROUP BY P.Pais
+    ORDER BY CasasDanadas DESC;
+    '''
+
+    sql10 = '''
+    SELECT P.Pais, AVG(T.MaximumWaterHeight) AS PromedioAlturaAgua
+    FROM Pais P
+    JOIN Tsunami T ON P.PaisID = T.PaisID
+    GROUP BY P.Pais;
+    '''
+
+    consultas = [sql1,sql2,sql3,sql4,sql5,sql6,sql7,sql8,sql9,sql10]
+    
+    connection = conexiondb()
+    cursor = connection.cursor()
+
+    with open("resultados_consulta.txt", 'w') as f:
+        for i, consulta in enumerate(consultas, start=1):
+            try:
+                cursor.execute(consulta)
+                resultados = cursor.fetchall()
+                f.write(f"Resultados de la consulta {i}:\n")
+                for resultado in resultados:
+                    f.write(str(resultado) + '\n')
+                f.write("\n")
+            except Exception as e:
+                print(f"Error al ejecutar la consulta {i}: {str(e)}")
+
+    connection.close()
+
 def main():
     while True:
         print("\nOpciones:")
